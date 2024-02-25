@@ -1,18 +1,9 @@
 name = "line-app"
 compatibility_date = "2023-12-01"
 
-# [vars]
-# MY_VARIABLE = "production_value"
-
-# [[kv_namespaces]]
-# binding = "MY_KV_NAMESPACE"
-# id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-
-# [[r2_buckets]]
-# binding = "MY_BUCKET"
-# bucket_name = "my-bucket"
-
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "my-database"
-# database_id = ""
+[[d1_databases]]
+binding = "db"
+database_name = "line-app"
+database_id = "70384081-5bbd-4920-8ee1-df8ccdc43616"
+preview_database_id = "08785bf0-7909-46a6-85d5-ee405e24b829"
+migrations_dir = ".wrangler/migrations"
