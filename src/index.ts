@@ -64,15 +64,24 @@ app.post("/api/webhook", async (c) => {
             text: result?.message || '',
           }]
           result && await reply(messages, accessToken, event.replyToken);
+        } else if (type === 'cancel') {
+          const result = await stockService.cancelStock({
+            message: event.message.text,
+          });
+          const messages = [{
+            type: "text" as const,
+            text: result?.message || '',
+          }]
+          result && await reply(messages, accessToken, event.replyToken);
         } else if (type === 'check') { 
           const result = await stockService.getStockList();
+          console.log('result', result)
+
           const messages = result.map((stock, index) => {
-            return {
-              type: "text" as const,
-              text: `${index+1}: ${stock.alias}`,
-            };
-          });
-          await reply(messages, accessToken, event.replyToken);
+            return `${index + 1}. ${stock.alias}\n`
+          }).join('\n');
+
+          await reply([{ type: "text" as const, text: messages }], accessToken, event.replyToken);
         
         } else if (type == 'none') {
           const result = await stockService.getStocksByMessage({
