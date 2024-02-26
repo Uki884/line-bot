@@ -5,7 +5,7 @@ import {
   WebhookEvent,
 } from "@line/bot-sdk";
 import { client } from './db/client';
-import { Stock } from './stock';
+import { StockService } from './services/stockService';
 
 export type Env = {
   db: D1Database;
@@ -28,27 +28,63 @@ app.post("/api/webhook", async (c) => {
           await upsertUser(db, event.source.userId);
         }
         const user = await findUserByUid(db, event.source.userId);
-        console.log(user);
-        const stock = new Stock(db);
 
         if (event.type !== "message" || event.message.type !== "text" || !user) {
           return;
         }
 
-        const type = stock.getMessageType(event.message.text);
+        const stockService = new StockService({ db, userId: user.id });
+
+        const type = await stockService.getMessageType(event.message.text);
+        console.log('type', type)
 
         if (type === "start") {
-          const result = await stock.startStock({
+          const result = await stockService.startStock({
             message: event.message.text,
-            userId: user.id,
           });
-          result && await reply(result.message, accessToken, event.replyToken);
+          const messages = [{
+            type: "text" as const,
+            text: result?.message || '',
+          }]
+          result && await reply(messages, accessToken, event.replyToken);
         } else if (type === "continue") {
-          const result = await stock.continueStock({
+          const result = await stockService.continueStock({
             message: event.message.text,
-            userId: user.id,
           });
-          result && await reply(result.message, accessToken, event.replyToken);
+          const messages = [{
+            type: "text" as const,
+            text: result?.message || '',
+          }]
+          result && await reply(messages, accessToken, event.replyToken);
+        } else if (type === "stop") {
+          const result = await stockService.endStock({
+            message: event.message.text,
+          });
+          const messages = [{
+            type: "text" as const,
+            text: result?.message || '',
+          }]
+          result && await reply(messages, accessToken, event.replyToken);
+        } else if (type == 'none') {
+          const result = await stockService.getStocksByMessage({
+            message: event.message.text,
+          });
+
+          if (result.length === 0) {
+            const messages = [{
+              type: "text" as const,
+              text: '見つかりませんでした',
+            }]
+            await reply(messages, accessToken, event.replyToken);
+          } else {
+            const messages = result.map((stock) => {
+              return {
+                type: "text" as const,
+                text: stock.content,
+              };
+            });
+            await reply(messages, accessToken, event.replyToken);
+          }
         }
 
       } catch (err: unknown) {
@@ -65,20 +101,15 @@ app.post("/api/webhook", async (c) => {
 });
 
 const reply = async (
-  message: string,
+  messages: TextMessage[],
   accessToken: string,
   replyToken: string
 ) => {
 
-  const response: TextMessage = {
-    type: "text",
-    text: message,
-  };
-
   await fetch("https://api.line.me/v2/bot/message/reply", {
     body: JSON.stringify({
       replyToken: replyToken,
-      messages: [response],
+      messages: messages,
     }),
     method: "POST",
     headers: {
