@@ -4,10 +4,18 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
   : ColumnType<T, T | undefined, T>;
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
+export type Message = {
+    id: Generated<number>;
+    content: string;
+    userId: number;
+    createdAt: Generated<string>;
+    updatedAt: Generated<string>;
+};
 export type Stock = {
     id: Generated<number>;
     content: string;
     stockGroupId: number;
+    userId: number;
     createdAt: Generated<string>;
     updatedAt: Generated<string>;
 };
@@ -25,6 +33,7 @@ export type User = {
     updatedAt: Generated<string>;
 };
 export type DB = {
+    Message: Message;
     Stock: Stock;
     StockGroup: StockGroup;
     User: User;

@@ -18,6 +18,8 @@ model User {
   uid  String @unique
 
   stockGroups StockGroup[]
+  stocks      Stock[]
+  messages    Message[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
@@ -39,8 +41,21 @@ model Stock {
   id        Int      @id @default(autoincrement())
   content String
   stockGroupId Int
+  userId  Int
 
   stockGroup    StockGroup @relation(fields: [stockGroupId], references: [id])
+  user    User  @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+}
+
+model Message {
+  id        Int      @id @default(autoincrement())
+  content String
+  userId  Int
+
+  user    User @relation(fields: [userId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())

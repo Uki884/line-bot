@@ -5,6 +5,7 @@ import {
   WebhookEvent,
 } from "@line/bot-sdk";
 import { client } from './db/client';
+import { Stock } from './stock';
 
 export type Env = {
   db: D1Database;
@@ -28,7 +29,27 @@ app.post("/api/webhook", async (c) => {
         }
         const user = await findUserByUid(db, event.source.userId);
         console.log(user);
-        await textEventHandler(event, accessToken);
+        const stock = new Stock(db);
+
+        if (event.type !== "message" || event.message.type !== "text" || !user) {
+          return;
+        }
+
+        const type = stock.getMessageType(event.message.text);
+
+        if (type === "start") {
+          const result = await stock.startStock({
+            message: event.message.text,
+            userId: user.id,
+          });
+          result && await reply(result.message, accessToken, event.replyToken);
+        } else if (type === "continue") {
+          const result = await stock.continueStock({
+            message: event.message.text,
+            userId: user.id,
+          });
+          result && await reply(result.message, accessToken, event.replyToken);
+        }
 
       } catch (err: unknown) {
         if (err instanceof Error) {
@@ -43,19 +64,15 @@ app.post("/api/webhook", async (c) => {
   return c.json({ message: "ok" });
 });
 
-const textEventHandler = async (
-  event: WebhookEvent,
+const reply = async (
+  message: string,
   accessToken: string,
-): Promise<MessageAPIResponseBase | undefined> => {
-  if (event.type !== "message" || event.message.type !== "text") {
-    return;
-  }
+  replyToken: string
+) => {
 
-  const { replyToken } = event;
-  const { text } = event.message;
   const response: TextMessage = {
     type: "text",
-    text,
+    text: message,
   };
 
   await fetch("https://api.line.me/v2/bot/message/reply", {
