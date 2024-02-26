@@ -1,16 +1,23 @@
 {
   "name": "line-remember-bot",
   "scripts": {
-    "dev": "wrangler dev src/index.ts",
+    "dev": "wrangler dev src/index.ts --remote",
     "deploy": "wrangler deploy --minify src/index.ts",
-    "tail": "wrangler tail"
+    "tail": "wrangler tail",
+    "db:migrate:dev": "prisma migrate dev --preview-feature",
+    "db:migrate:deploy": "zx scripts/migration_apply.mjs"
   },
   "dependencies": {
-    "hono": "^4.0.6"
+    "hono": "^4.0.6",
+    "kysely": "^0.27.2",
+    "zx": "^7.2.3"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20240208.0",
+    "@cloudflare/workers-types": "^4.20240222.0",
     "@line/bot-sdk": "^8.4.0",
+    "kysely-d1": "^0.3.0",
+    "prisma": "^5.10.2",
+    "prisma-kysely": "^1.8.0",
     "wrangler": "^3.25.0"
   }
 }
