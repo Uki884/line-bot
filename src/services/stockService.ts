@@ -1,9 +1,8 @@
 import { client } from "../db/client";
 
 const startStockRegExp = new RegExp(/^記憶して/)
-const saveStockRegExp = new RegExp(/^保存して/)
-const reStockRegExp = new RegExp(/^やり直して/)
-const stopStockRegExp = new RegExp(/^終了/)
+const stopStockRegExp = new RegExp(/^終了して/)
+const checkStocksRegExp = new RegExp(/^確認して/)
 const saveStockGroupText = 'グループ名を保存'
 
 type Payload = {
@@ -19,7 +18,7 @@ export class StockService {
     this.userId = payload.userId;
   }
 
-  getStocksByMessage = async ({ message }: Payload) => {
+  public getStocksByMessage = async ({ message }: Payload) => {
     const hasGroup = await this.getStockGroup(message);
 
     if (hasGroup) {
@@ -33,6 +32,16 @@ export class StockService {
     } else {
       return []
     }
+  };
+
+  public getStockList = async () => {
+    const stockGroup = await client(this.db)
+      .selectFrom('StockGroup')
+      .where('StockGroup.userId', '=', this.userId)
+      .selectAll()
+      .execute();
+
+    return stockGroup;
   };
 
   public startStock = async ({ message }: Payload) => {
@@ -99,34 +108,19 @@ export class StockService {
     }
   };
 
-  public saveStock = async ({ message }: Payload) => {
-    if (await this.getMessageType(message) !== "save") return { message: 'エラーが発生しました' }
-
-    const messages = await client(this.db)
-    .selectFrom('Message')
-    .where('Message.userId', '=', this.userId)
-    .where('Message.content', '!=', '記憶して')
-    .orderBy('Message.createdAt asc')
-    .selectAll()
-    .execute();
-
-    console.log(messages);
-
-  };
-
   getMessageType = async (message: string) => {
     if (startStockRegExp.test(message)) {
       return "start";
     }
-    if (saveStockRegExp.test(message)) {
-      return "save";
-    }
-    if (reStockRegExp.test(message)) {
-      return "re";
-    }
+
     if (stopStockRegExp.test(message)) {
       return "stop";
     }
+
+    if (checkStocksRegExp.test(message)) {
+      return "check";
+    }
+
     const hasStartStockText = await this.hasStartStockText();
     if (hasStartStockText) {
       return "continue";

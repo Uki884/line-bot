@@ -1,6 +1,5 @@
 import { Hono } from 'hono'
 import {
-  MessageAPIResponseBase,
   TextMessage,
   WebhookEvent,
 } from "@line/bot-sdk";
@@ -65,6 +64,16 @@ app.post("/api/webhook", async (c) => {
             text: result?.message || '',
           }]
           result && await reply(messages, accessToken, event.replyToken);
+        } else if (type === 'check') { 
+          const result = await stockService.getStockList();
+          const messages = result.map((stock, index) => {
+            return {
+              type: "text" as const,
+              text: `${index+1}: ${stock.alias}`,
+            };
+          });
+          await reply(messages, accessToken, event.replyToken);
+        
         } else if (type == 'none') {
           const result = await stockService.getStocksByMessage({
             message: event.message.text,
