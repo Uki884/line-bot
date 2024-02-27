@@ -45,7 +45,7 @@ app.post("/api/webhook", async (c) => {
             type: "text" as const,
             text: result?.message || '',
           }]
-          result && await reply(messages, accessToken, event.replyToken);
+          return result && await reply(messages, accessToken, event.replyToken);
         } else if (type === "continue") {
           const result = await stockService.continueStock({
             message: event.message.text,
@@ -54,7 +54,7 @@ app.post("/api/webhook", async (c) => {
             type: "text" as const,
             text: result?.message || '',
           }]
-          result && await reply(messages, accessToken, event.replyToken);
+          return result && await reply(messages, accessToken, event.replyToken);
         } else if (type === "stop") {
           const result = await stockService.endStock({
             message: event.message.text,
@@ -63,7 +63,7 @@ app.post("/api/webhook", async (c) => {
             type: "text" as const,
             text: result?.message || '',
           }]
-          result && await reply(messages, accessToken, event.replyToken);
+          return result && await reply(messages, accessToken, event.replyToken);
         } else if (type === 'cancel') {
           const result = await stockService.cancelStock({
             message: event.message.text,
@@ -72,17 +72,33 @@ app.post("/api/webhook", async (c) => {
             type: "text" as const,
             text: result?.message || '',
           }]
-          result && await reply(messages, accessToken, event.replyToken);
+          return result && await reply(messages, accessToken, event.replyToken);
         } else if (type === 'check') { 
           const result = await stockService.getStockList();
-          console.log('result', result)
 
           const messages = result.map((stock, index) => {
-            return `${index + 1}. ${stock.alias}\n`
+            return `${index + 1}. ${stock.alias}`
           }).join('\n');
 
-          await reply([{ type: "text" as const, text: messages }], accessToken, event.replyToken);
-        
+          return await reply([{ type: "text" as const, text: messages }], accessToken, event.replyToken);
+        } else if (type === 'remove') {
+          const result = await stockService.removableStockList({
+            message: event.message.text,
+          });
+          const messages = [{
+            type: "text" as const,
+            text: result?.message || '',
+          }]
+          return result && await reply(messages, accessToken, event.replyToken);
+        } else if (type === 'remove_starting') {
+          const result = await stockService.removeStock({
+            message: event.message.text,
+          });
+          const messages = [{
+            type: "text" as const,
+            text: result?.message || '',
+          }]
+          return result && await reply(messages, accessToken, event.replyToken);
         } else if (type == 'none') {
           const result = await stockService.getStocksByMessage({
             message: event.message.text,
@@ -93,7 +109,7 @@ app.post("/api/webhook", async (c) => {
               type: "text" as const,
               text: '見つかりませんでした',
             }]
-            await reply(messages, accessToken, event.replyToken);
+          return await reply(messages, accessToken, event.replyToken);
           } else {
             const messages = result.map((stock) => {
               return {
@@ -101,7 +117,7 @@ app.post("/api/webhook", async (c) => {
                 text: stock.content,
               };
             });
-            await reply(messages, accessToken, event.replyToken);
+            return await reply(messages, accessToken, event.replyToken);
           }
         }
 

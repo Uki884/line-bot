@@ -1,7 +1,7 @@
 {
   "name": "line-remember-bot",
   "scripts": {
-    "dev": "wrangler dev src/index.ts --remote",
+    "dev": "wrangler dev src/index.ts",
     "deploy": "wrangler deploy --minify src/index.ts",
     "tail": "wrangler tail",
     "db:migrate:dev": "prisma migrate dev --preview-feature",

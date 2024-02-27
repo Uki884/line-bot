@@ -1,11 +1,13 @@
 import { client } from "../db/client";
 
 const startStockRegExp = new RegExp(/^覚えて/)
+const removeStockRegExp = new RegExp(/^忘れて/)
 const stopStockRegExp = new RegExp(/^終了する/)
 const cancelStockRegExp = new RegExp(/^やめる/)
 const checkStocksRegExp = new RegExp(/^リストを見せて/)
 const stopStockText = '終了する' 
 const startStockText = '覚えて'
+const startRemoveStockText = '忘れて'
 const saveStockGroupText = 'グループ名を保存'
 
 type Payload = {
@@ -66,7 +68,7 @@ export class StockService {
     await client(this.db).deleteFrom('Message').where('Message.userId', '=', this.userId).execute();
 
     return {
-      message: '終了しました！登録した内容を確認するには「リストを見せて」と入力してください',
+      message: '終了しました！覚えさせた言葉リストを確認するには「リストを見せて」と入力してください',
     }
   };
 
@@ -115,7 +117,7 @@ export class StockService {
       }).execute();
 
       return {
-        message: `保存しました。続けて保存する単語を入力するか、このまま終了する場合は「${stopStockText}」と入力してください`,
+        message: `保存しました。続けて保存する言葉を入力するか、このまま終了する場合は「${stopStockText}」と入力してください`,
       }
     } else {
       await client(this.db).insertInto('StockGroup').values({
@@ -129,7 +131,53 @@ export class StockService {
       }).execute();
 
       return {
-        message: '続けて覚えさせたい言葉を教えて下さい。覚えさせるのをやめる場合は「やめる」と入力してください',
+        message: '覚えさせたい言葉を入力してください。覚えさせるのをやめる場合は「やめる」と入力してください',
+      }
+    }
+  };
+
+  public removableStockList = async ({ message }: Payload) => {
+    if (await this.getMessageType(message) !== "remove") return { message: 'エラーが発生しました' }
+    const stockList = await this.getStockList();
+
+    await client(this.db).insertInto('Message').values({
+      content: startRemoveStockText,
+      userId: this.userId,
+    }).execute();
+
+    return {
+      message: `忘れさせたい言葉の番号を入力してください\n${stockList.map((stock, index) => `${index + 1}: ${stock.alias}`).join('\n')}`
+    }
+  };
+
+  public removeStock = async ({ message }: Payload) => {
+    const index = Number(message) - 1;
+    if (isNaN(index)) {
+      return {
+        message: '番号を入力してください'
+      }
+    }
+    const stockList = await this.getStockList();
+    const stock = stockList[index];
+    const resultStackList = stockList.filter((_, i) => i !== index);
+
+    if (stock) {
+      await client(this.db)
+      .deleteFrom('Stock')
+      .where('Stock.stockGroupId', '=', stock.id)
+      .execute();
+      await client(this.db)
+        .deleteFrom('StockGroup')
+        .where('StockGroup.id', '=', stock.id)
+        .where('StockGroup.userId', '=', this.userId)
+        .execute();
+
+      return {
+        message: `${stock.alias}に関する言葉を忘れました。続けて忘れさせたい言葉があれば番号を入力してください\n${resultStackList.map((stock, index) => `${index + 1}: ${stock.alias}`).join('\n')}\nこのまま終わる場合は「${stopStockText}」って入力してね`
+      }
+    } else {
+      return {
+        message: 'その言葉は覚えてません...'
       }
     }
   };
@@ -137,6 +185,10 @@ export class StockService {
   getMessageType = async (message: string) => {
     if (startStockRegExp.test(message)) {
       return "start";
+    }
+
+    if (removeStockRegExp.test(message)) {
+      return "remove";
     }
 
     if (cancelStockRegExp.test(message)) {
@@ -151,8 +203,11 @@ export class StockService {
       return "check";
     }
 
-    const hasStartStockText = await this.hasStartStockText();
-    if (hasStartStockText) {
+    if (await this.hasRemoveStartStockText()) {
+      return "remove_starting";      
+    }
+
+    if (await this.hasStartStockText()) {
       return "continue";
     }
 
@@ -167,6 +222,17 @@ export class StockService {
     .orderBy('StockGroup.createdAt desc')
     .selectAll()
     .executeTakeFirst();
+  }
+
+  private hasRemoveStartStockText = async () => {
+    const continueStock = await client(this.db)
+      .selectFrom('Message')
+      .where('Message.userId', '=', this.userId)
+      .where('Message.content', '=', startRemoveStockText)
+      .selectAll()
+      .executeTakeFirst();
+
+    return !!continueStock;
   }
 
   private hasStartStockText = async () => {
